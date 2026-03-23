@@ -338,30 +338,24 @@ class Session(object, metaclass=SingletonType):
         refresh_thread.start()
 
     def __configure_log_forwarding(self, session_valid=False):
+        # Disabled in this fork — no remote logging to api.unmanic.app
+        # Only respects UNMANIC_REMOTE_LOGGING_ENDPOINT env var if explicitly set
         settings = config.Config()
         log_buffer_retention = settings.get_log_buffer_retention()
-        if session_valid:
-            # Import endpoint from env vars
-            endpoint = os.environ.get("UNMANIC_REMOTE_LOGGING_ENDPOINT", "")
-            # If not set in env vars, fetch endpoint from unmanic-api
-            if not endpoint or not endpoint.startswith("http"):
-                endpoint = None
-                try:
-                    # Fetch endpoint from Unmanic site API
-                    response, status_code = self.api_get("unmanic-api", 1, "central_config/get_datastore_endpoint")
-                    if status_code in [200] and response.get("success"):
-                        endpoint = response.get("data").get("endpoint")
-                except Exception as e:
-                    self.logger.debug("Exception while fetching Unmanic Central Datastore endpoint - %s", e)
-            if endpoint:
-                UnmanicLogging.enable_remote_logging(endpoint, self.uuid, log_buffer_retention)
-                return
+        endpoint = os.environ.get("UNMANIC_REMOTE_LOGGING_ENDPOINT", "")
+        if endpoint and endpoint.startswith("http"):
+            UnmanicLogging.enable_remote_logging(endpoint, self.uuid, log_buffer_retention)
+            return
         UnmanicLogging.disable_remote_logging(log_buffer_retention)
 
     def __sync_remote_installation_addresses(self):
         """
-        Fetch list of installations if supporter and sync addresses
+        Disabled in this fork — no sync with api.unmanic.app.
         """
+        return
+
+    def _sync_remote_installation_addresses_disabled(self):
+        """Original — kept for reference, never called."""
         settings = config.Config()
         installations_response, status_code = self.api_get("unmanic-api", 1, "installation_data/list")
         installations = installations_response.get("data", {}).get("installations", [])
