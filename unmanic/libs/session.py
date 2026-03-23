@@ -734,23 +734,21 @@ class Session(object, metaclass=SingletonType):
     def register_unmanic(self, force=False):
         """
         Register Unmanic with site.
-        This sends information about the system that Unmanic is running on.
-        It also sends a unique ID.
-
-        Based on the return information, this will set the session level.
+        Disabled in this fork — no communication with api.unmanic.app.
+        Always returns True with level 7.
 
         Return success status.
 
         :param force:
         :return:
         """
-        # First check if the current session is still valid
-        if not force and self.__check_session_valid():
-            return True
-
-        # Set now as the last time this was run (before it was actually run
+        # No phone-home in this fork
+        self.level = 7
         self.last_check = time.time()
+        return True
 
+    def _register_unmanic_disabled(self, force=False):
+        """Original register_unmanic — kept for reference, never called."""
         # Update the session
         settings = config.Config()
         # Fetch the installation data prior to running a session update

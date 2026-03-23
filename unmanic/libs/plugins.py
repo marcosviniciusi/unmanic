@@ -133,31 +133,21 @@ class PluginsHandler(object, metaclass=SingletonType):
         return True
 
     def fetch_remote_repo_data(self, repo_path):
-        # Fetch remote JSON file with cache-busting timestamp
+        # Fetch repo.json directly from the source URL, bypassing api.unmanic.app proxy
         import time
-        session = Session()
-        uuid = session.get_installation_uuid()
-        level = session.get_supporter_level()
-        repo = base64.b64encode(repo_path.encode('utf-8')).decode('utf-8')
+        import requests as req
         cache_bust = int(time.time())
-        api_path = f'plugin_repos/repo_data/uuid/{uuid}/level/{level}/repo/{repo}?_t={cache_bust}'
-        data, status_code = session.api_get(
-            'unmanic-api',
-            2,
-            api_path,
-        )
-        if status_code == 401:
-            # Something is wrong with registration. Let's resend it and try again.
-            self.logger.debug(f"Plugin repo returned a request to register. Code:{status_code}")
-            session.register_unmanic()
-            data, status_code = session.api_get(
-                'unmanic-api',
-                2,
-                api_path,
-            )
-        if status_code >= 500:
-            self.logger.debug(f"Failed to fetch plugin repo from '{api_path}'. Code:{status_code}")
-        return data
+        url = f"{repo_path.rstrip('/')}?_t={cache_bust}"
+        self.logger.info("Fetching plugin repo directly from '%s'", url)
+        try:
+            r = req.get(url, timeout=30, headers={'Cache-Control': 'no-cache'})
+            if r.status_code == 200:
+                return r.json()
+            else:
+                self.logger.error("Failed to fetch plugin repo from '%s'. Code:%s", url, r.status_code)
+        except Exception as e:
+            self.logger.error("Exception fetching plugin repo from '%s': %s", url, e)
+        return {}
 
     def update_plugin_repos(self):
         """
@@ -331,30 +321,9 @@ class PluginsHandler(object, metaclass=SingletonType):
 
     def notify_site_of_plugin_install(self, plugin):
         """
-        Notify the unmanic.app site API of the installation.
-        This is used for metric stats so that we can get a count of plugin downloads.
-
-        :param plugin:
-        :return:
+        Disabled in this fork — no telemetry to api.unmanic.app.
         """
-        # Post
-        session = Session()
-        uuid = session.get_installation_uuid()
-        level = session.get_supporter_level()
-        post_data = {
-            "uuid":      uuid,
-            "level":     level,
-            "plugin_id": plugin.get("plugin_id"),
-            "author":    plugin.get("author"),
-            "version":   plugin.get("version"),
-        }
-        try:
-            repo_data, status_code = session.api_post('unmanic-api', 1, 'plugin_repos/record_install', post_data)
-            if not repo_data.get('success'):
-                session.register_unmanic()
-        except Exception as e:
-            self.logger.debug("Exception while logging plugin install. %s", str(e))
-            return False
+        return
 
     def install_plugin_by_id(self, plugin_id, repo_id=None):
         """
@@ -460,11 +429,10 @@ class PluginsHandler(object, metaclass=SingletonType):
         :param plugin:
         :return:
         """
-        # Fetch remote zip file
+        # Fetch remote zip file directly (no api.unmanic.app proxy)
         destination = self.get_plugin_download_cache_path(plugin.get("plugin_id"), plugin.get("version"))
         self.logger.debug("Downloading plugin '%s' to '%s'", plugin.get("package_url"), destination)
-        session = Session()
-        with session.requests_session.get(plugin.get("package_url"), stream=True, allow_redirects=True) as r:
+        with requests.get(plugin.get("package_url"), stream=True, allow_redirects=True, timeout=30) as r:
             r.raise_for_status()
             with open(destination, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=128):
