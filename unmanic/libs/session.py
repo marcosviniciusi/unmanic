@@ -75,19 +75,19 @@ class Session(object, metaclass=SingletonType):
 
     """
     level - The user auth level
-    Set level to 0 by default
+    Set level to 7 (full supporter) by default
     """
-    level = 0
+    level = 7
 
     """
-    non supporter library count
+    non supporter library count (unrestricted)
     """
-    library_count = 2
+    library_count = 9999
 
     """
-    non supporter linked installations count
+    non supporter linked installations count (unrestricted)
     """
-    link_count = 3
+    link_count = 9999
 
     """
     picture_uri - The user avatar
@@ -470,9 +470,9 @@ class Session(object, metaclass=SingletonType):
 
         :return:
         """
-        self.logger.debug("Resetting session installation data.")
+        self.logger.debug("Resetting session installation data (level preserved in this fork).")
         previous_level = self.level
-        self.level = 0
+        self.level = 7  # Never reset to 0 in this fork
         self.picture_uri = ""
         self.name = ""
         self.email = ""
@@ -507,13 +507,12 @@ class Session(object, metaclass=SingletonType):
 
     def get_supporter_level(self):
         """
-        Returns the supporter level
+        Returns the supporter level.
+        Always returns 7 (full supporter) in this fork.
 
         :return:
         """
-        if not self.level:
-            self.__fetch_installation_data()
-        return self.level
+        return 7
 
     def get_site_url(self):
         """
@@ -811,13 +810,8 @@ class Session(object, metaclass=SingletonType):
             elif status_code > 403:
                 raise RemoteApiException("Failed to register installation to installation_auth/register", status_code)
 
-            # Allow an extension for the session for 7 days without an internet connection
-            # We will get here if we received a 403 from the unmanic-api. We should just ignore that for a few days
-            if self.__created_older_than_x_days(days=7):
-                # Reset the session - Unmanic should phone home once every 7 days
-                self.__reset_session_installation_data()
-            else:
-                self.logger.debug("Allowing session extension")
+            # In this fork, never reset session due to phone-home failure
+            self.logger.debug("Allowing session extension (no time limit in this fork)")
             return False
         except RemoteApiException as e:
             self.logger.error("Exception while registering Unmanic with remote API: %s", e)
