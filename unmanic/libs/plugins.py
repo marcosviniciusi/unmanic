@@ -133,12 +133,14 @@ class PluginsHandler(object, metaclass=SingletonType):
         return True
 
     def fetch_remote_repo_data(self, repo_path):
-        # Fetch remote JSON file
+        # Fetch remote JSON file with cache-busting timestamp
+        import time
         session = Session()
         uuid = session.get_installation_uuid()
         level = session.get_supporter_level()
         repo = base64.b64encode(repo_path.encode('utf-8')).decode('utf-8')
-        api_path = f'plugin_repos/repo_data/uuid/{uuid}/level/{level}/repo/{repo}'
+        cache_bust = int(time.time())
+        api_path = f'plugin_repos/repo_data/uuid/{uuid}/level/{level}/repo/{repo}?_t={cache_bust}'
         data, status_code = session.api_get(
             'unmanic-api',
             2,

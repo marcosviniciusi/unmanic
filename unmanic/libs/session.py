@@ -548,7 +548,12 @@ class Session(object, metaclass=SingletonType):
         :return:
         """
         u = self.set_full_api_url(api_prefix, api_version, api_path)
-        r = self.requests_session.get(u, timeout=self.timeout)
+        # Add cache-busting headers to avoid stale proxy responses
+        headers = {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+        }
+        r = self.requests_session.get(u, timeout=self.timeout, headers=headers)
         if r.status_code > 403:
             # There is an issue with the remote API
             raise RemoteApiException(f"GET request failed for {u}", r.status_code)
@@ -558,7 +563,7 @@ class Session(object, metaclass=SingletonType):
             token_verified = self.verify_token()
             # If successful, then retry request
             if token_verified:
-                r = self.requests_session.get(u, timeout=self.timeout)
+                r = self.requests_session.get(u, timeout=self.timeout, headers=headers)
                 if r.status_code > 403:
                     # There is an issue with the remote API
                     raise RemoteApiException(f"GET request still failed for {u}", r.status_code)

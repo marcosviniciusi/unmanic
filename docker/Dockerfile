@@ -291,6 +291,45 @@ RUN \
             /tmp/*
 
 
+# Install OCR dependencies for PGS/VOBSUB subtitle conversion to SRT
+RUN \
+    echo "**** Configure APT ****" \
+        && export DEBIAN_FRONTEND=noninteractive \
+    && \
+    echo "**** Install tesseract-ocr and mkvtoolnix ****" \
+        && apt-get update \
+        && apt-get install -y --no-install-recommends \
+            tesseract-ocr \
+            tesseract-ocr-por \
+            tesseract-ocr-eng \
+            mkvtoolnix \
+    && \
+    echo "**** Install pgsrip into virtualenv ****" \
+        && /opt/venv/bin/pip install --no-cache-dir pgsrip \
+    && \
+    echo "**** Download tessdata_best for improved Portuguese accuracy ****" \
+        && TESSDATA_DIR=$(find / -type d -name tessdata 2>/dev/null | head -1) \
+        && if [ -n "$TESSDATA_DIR" ]; then \
+            wget -q -O "${TESSDATA_DIR}/por.traineddata" \
+                "https://github.com/tesseract-ocr/tessdata_best/raw/main/por.traineddata" \
+            && wget -q -O "${TESSDATA_DIR}/eng.traineddata" \
+                "https://github.com/tesseract-ocr/tessdata_best/raw/main/eng.traineddata"; \
+        fi \
+    && \
+    echo "**** Verify OCR installations ****" \
+        && tesseract --version \
+        && /opt/venv/bin/python3 -c "import pgsrip; print('pgsrip OK')" \
+        && mkvextract --version \
+    && \
+    echo "**** Section cleanup ****" \
+        && apt-get clean autoclean -y \
+        && apt-get autoremove -y \
+        && rm -rf \
+            /var/lib/apt/lists/* \
+            /var/tmp/* \
+            /tmp/*
+
+
 # Prepare default home directory for runtime user
 RUN \
     echo "**** Prepare /config home directory ****" \
