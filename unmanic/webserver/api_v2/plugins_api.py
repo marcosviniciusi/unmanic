@@ -1170,14 +1170,9 @@ class ApiPluginsHandler(BaseApiHandler):
                     except Exception:
                         tornado.log.app_log.warning("Failed to read community repos cache", exc_info=True)
 
-            uuid = self.session.get_installation_uuid()
-            level = self.session.get_supporter_level()
-            api_path = f'plugin_repos/community_forks/uuid/{uuid}/level/{level}'
-            response, status_code = self.session.api_get('unmanic-api', 2, api_path)
-            if status_code != 200:
-                self.set_status(status_code)
-                self.finish(response)
-                return
+            # Community forks disabled in this fork — no api.unmanic.app communication
+            response = {"repos": []}
+            status_code = 200
             if not self.settings.get("serve_traceback"):
                 try:
                     with open(cache_path, 'w') as f:
